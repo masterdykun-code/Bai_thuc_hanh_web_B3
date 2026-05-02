@@ -1,17 +1,38 @@
 import { useEffect, useState } from "react";
-import { getProducts, createProduct, deleteProduct } from "../api/productApi";
+import {
+  createProduct,
+  deleteProduct,
+  getProducts,
+  updateProduct,
+} from "../api/productApi";
+import "./Products.css";
+
+const initialForm = {
+  name: "",
+  price: "",
+};
 
 function Products() {
   const [products, setProducts] = useState([]);
-  const [name, setName] = useState("");
-  const [price, setPrice] = useState("");
+  const [form, setForm] = useState(initialForm);
+  const [editingId, setEditingId] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const isEditing = editingId !== null;
 
   const loadProducts = async () => {
+    setIsLoading(true);
+
     try {
       const data = await getProducts();
       setProducts(data);
+      setErrorMessage("");
     } catch (error) {
       console.error("Lỗi lấy sản phẩm:", error);
+      setErrorMessage("Không thể tải danh sách sản phẩm từ API.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -19,107 +40,140 @@ function Products() {
     loadProducts();
   }, []);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+
+    setForm((currentForm) => ({
+      ...currentForm,
+      [name]: value,
+    }));
+  };
+
+  const resetForm = () => {
+    setForm(initialForm);
+    setEditingId(null);
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    if (!form.name.trim() || form.price === "") {
+      setErrorMessage("Vui lòng nhập tên sản phẩm và giá.");
+      return;
+    }
+
+    const product = {
+      name: form.name.trim(),
+      price: Number(form.price),
+    };
 
     try {
-      await createProduct({
-        name,
-        price: Number(price),
-      });
+      if (isEditing) {
+        await updateProduct(editingId, { id: editingId, ...product });
+      } else {
+        await createProduct(product);
+      }
 
-      setName("");
-      setPrice("");
-      loadProducts();
+      resetForm();
+      await loadProducts();
     } catch (error) {
-      console.error("Lỗi thêm sản phẩm:", error);
+      console.error("Lỗi lưu sản phẩm:", error);
+      setErrorMessage("Không thể lưu sản phẩm. Vui lòng kiểm tra backend.");
     }
+  };
+
+  const handleEdit = (product) => {
+    setEditingId(product.id);
+    setForm({
+      name: product.name,
+      price: String(product.price),
+    });
+    setErrorMessage("");
   };
 
   const handleDelete = async (id) => {
     try {
       await deleteProduct(id);
-      loadProducts();
+
+      if (editingId === id) {
+        resetForm();
+      }
+
+      await loadProducts();
     } catch (error) {
-      console.error("Lỗi xoá sản phẩm:", error);
+      console.error("Lỗi xóa sản phẩm:", error);
+      setErrorMessage("Không thể xóa sản phẩm. Vui lòng kiểm tra backend.");
     }
   };
 
   return (
-    <div className="container" style={{ padding: "60px 0" }}>
-      <h1 style={{ fontSize: "38px", marginBottom: "20px" }}>
-        Danh sách sản phẩm
-      </h1>
+    <div className="container products-page">
+      <h1 className="products-title">Danh sách sản phẩm</h1>
 
-      <form
-        onSubmit={handleSubmit}
-        style={{
-          marginBottom: "30px",
-          display: "flex",
-          gap: "12px",
-          flexWrap: "wrap",
-        }}
-      >
+      <form className="product-form" onSubmit={handleSubmit}>
         <input
           type="text"
+          name="name"
           placeholder="Tên sản phẩm"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          style={{ padding: "10px", minWidth: "220px" }}
+          value={form.name}
+          onChange={handleChange}
+          required
         />
+
         <input
           type="number"
+          name="price"
           placeholder="Giá"
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
-          style={{ padding: "10px", minWidth: "180px" }}
+          value={form.price}
+          onChange={handleChange}
+          min="0"
+          required
         />
-        <button
-          type="submit"
-          style={{
-            padding: "10px 16px",
-            background: "#1565f8",
-            color: "white",
-            borderRadius: "8px",
-          }}
-        >
-          Thêm sản phẩm
+
+        <button className="primary-action" type="submit">
+          {isEditing ? "Cập nhật sản phẩm" : "Thêm sản phẩm"}
         </button>
+
+        {isEditing && (
+          <button className="secondary-action" type="button" onClick={resetForm}>
+            Hủy
+          </button>
+        )}
       </form>
 
-      <div style={{ display: "grid", gap: "16px" }}>
-        {products.map((product) => (
-          <div
-            key={product.id}
-            style={{
-              background: "white",
-              padding: "16px",
-              borderRadius: "12px",
-              border: "1px solid #ddd",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <div>
-              <h3>{product.name}</h3>
-              <p>{product.price} ₫</p>
-            </div>
+      {errorMessage && <p className="form-error">{errorMessage}</p>}
 
-            <button
-              onClick={() => handleDelete(product.id)}
-              style={{
-                background: "#ef4444",
-                color: "white",
-                padding: "10px 14px",
-                borderRadius: "8px",
-              }}
-            >
-              Xóa
-            </button>
-          </div>
-        ))}
-      </div>
+      {isLoading ? (
+        <p>Đang tải sản phẩm...</p>
+      ) : (
+        <div className="product-list">
+          {products.map((product) => (
+            <article className="product-row" key={product.id}>
+              <div>
+                <h3>{product.name}</h3>
+                <p>{Number(product.price).toLocaleString("vi-VN")} đ</p>
+              </div>
+
+              <div className="row-actions">
+                <button
+                  className="edit-action"
+                  type="button"
+                  onClick={() => handleEdit(product)}
+                >
+                  Sửa
+                </button>
+                <button
+                  className="delete-action"
+                  type="button"
+                  onClick={() => handleDelete(product.id)}
+                >
+                  Xóa
+                </button>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

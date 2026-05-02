@@ -1,6 +1,35 @@
-@MyBackendAPI_HostAddress = http://localhost:5141
+@MyBackendAPI_HostAddress = https://localhost:7224
 
-GET {{MyBackendAPI_HostAddress}}/weatherforecast/
+GET {{MyBackendAPI_HostAddress}}/api/products
 Accept: application/json
 
 ###
+
+GET {{MyBackendAPI_HostAddress}}/api/products/1
+Accept: application/json
+
+###
+
+POST {{MyBackendAPI_HostAddress}}/api/products
+Content-Type: application/json
+
+{
+  "name": "Laptop Lenovo ThinkPad",
+  "price": 25000000
+}
+
+###
+
+PUT {{MyBackendAPI_HostAddress}}/api/products/1
+Content-Type: application/json
+
+{
+  "id": 1,
+  "name": "MacBook Pro 14",
+  "price": 52000000
+}
+
+###
+
+DELETE {{MyBackendAPI_HostAddress}}/api/products/1
+Accept: application/json

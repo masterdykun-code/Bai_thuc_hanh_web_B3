@@ -1,29 +1,33 @@
 import axios from "axios";
 
-const API_URL = "https://localhost:7225/api/products";
-// đổi port cho đúng backend của bạn
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ?? "https://localhost:7224/api";
+
+const productClient = axios.create({
+  baseURL: `${API_BASE_URL}/products`,
+});
 
 export const getProducts = async () => {
-  const response = await axios.get(API_URL);
+  const response = await productClient.get("");
   return response.data;
 };
 
 export const getProductById = async (id) => {
-  const response = await axios.get(`${API_URL}/${id}`);
+  const response = await productClient.get(`/${id}`);
   return response.data;
 };
 
 export const createProduct = async (product) => {
-  const response = await axios.post(API_URL, product);
+  const response = await productClient.post("", product);
   return response.data;
 };
 
 export const updateProduct = async (id, product) => {
-  const response = await axios.put(`${API_URL}/${id}`, product);
+  const response = await productClient.put(`/${id}`, product);
   return response.data;
 };
 
 export const deleteProduct = async (id) => {
-  const response = await axios.delete(`${API_URL}/${id}`);
+  const response = await productClient.delete(`/${id}`);
   return response.data;
 };
